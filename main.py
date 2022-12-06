@@ -3,14 +3,15 @@
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 
+import tensorflow as tf
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
-
+from model.base.dense_layer import DenseLayer
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    x = tf.ones((2, 2))
+    linear_layer = DenseLayer(4,2)
+    y = linear_layer(x)
+    print(y)
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
