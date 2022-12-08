@@ -1,5 +1,6 @@
 import tensorflow as tf
 import keras.backend as K
+from keras import activations
 
 from model.base.dense_layer import DenseLayer
 
@@ -9,7 +10,7 @@ class FMLayer(tf.keras.layers.Layer):
         super(FMLayer, self).__init__()
         self.factor_order = factor_order
         self.trainable = trainable
-        self.activation = activation
+        self.activation = activations.get(activation)
         self.layer_name = layer_name
         self.units = units
 

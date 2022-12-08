@@ -1,14 +1,10 @@
-import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
-
-from keras.models import Sequential
-from keras.layers import Dense, Activation
-from sklearn.datasets import make_blobs
-from sklearn.preprocessing import MinMaxScaler
+from matplotlib import pyplot as plt
+import tensorflow as tf
 
 from model.base.dense_layer import DenseLayer
 from model.base.fm_layer import FMLayer
+from model.base.resnet_layer import RestNetLayer1D
 
 # generate 2d classification dataset
 # X, y = make_blobs(n_samples=13, centers=2, n_features=2, random_state=1)
@@ -32,26 +28,34 @@ from model.base.fm_layer import FMLayer
 #  print("X=%s, Predicted=%s" % (Xnew[i], ynew[i]))
 
 
-x_data = np.linspace(0, 0.5, 2000)
+raw = np.linspace(0, 0.5, 2000)
+x_data = 16 * np.sin(raw) ** 3
 noise = np.random.normal(0, 0.02, x_data.shape)
-y_data = 100*np.square(x_data)*np.square(x_data) + noise  # 平方
-
+y_data = 13 * np.cos(x_data) - 5 * np.cos(2 * x_data) - 2 * np.cos(3 * x_data) - np.cos(4 * x_data)
+# np.square(x_data)
 plt.scatter(x_data, y_data)
 plt.show()
 
-model = Sequential()
-model.add(DenseLayer(units=100, layer_name="a"))
-model.add(DenseLayer(units=50, layer_name="a1", activation="tanh"))
-model.add(DenseLayer(units=10, layer_name="a2", activation="relu"))
-model.add(DenseLayer(units=1, layer_name="b", activation="relu"))
+# model = Sequential()
+# model.add(DenseLayer(units=100, layer_name="a"))
+# model.add(DenseLayer(units=50, layer_name="a1", activation="tanh"))
+# model.add(DenseLayer(units=10, layer_name="a2", activation="relu"))
+# model.add(DenseLayer(units=1, layer_name="b", activation="relu"))
 
+input_shape = x_data.shape
+inputs = tf.keras.Input(shape=(1,))
+x = DenseLayer(units=100, layer_name="a")(inputs)
+x1 = FMLayer(units=64, layer_name="a1", activation="tanh")(inputs)
+x2 = DenseLayer(units=32, layer_name="a2", activation="relu")(inputs)
+k = RestNetLayer1D(layer_name="a3", padding_value=0.0, use_dense=True)(x1, x2)
+
+outputs = DenseLayer(units=1, layer_name="o", activation="relu")(k)
+model = tf.keras.Model(inputs, outputs)
 model.compile(optimizer="sgd", loss='mse')
 
-for step in range(30001):
-    cost = model.train_on_batch(x_data, y_data)
-    if step % 500 == 0:
-        print('cost:', cost)
-print(model.summary())
+model.fit(x_data, y_data, epochs=13000)
+
+# print(model.summary())
 y_pred = model.predict(x_data)
 print(y_pred)
 print(y_data)
