@@ -22,6 +22,7 @@ class DenseLayer(tf.keras.layers.Layer):
 
         self.b = tf.Variable(name="dnn_layer_b_" + self.layer_name,
                              initial_value=self.b_init(shape=(self.units,), dtype="float32"), trainable=self.trainable)
+        super(DenseLayer, self).build(input_shape)
 
     def call(self, inputs):
         z = tf.matmul(inputs, self.w) + self.b

@@ -47,13 +47,14 @@ inputs = tf.keras.Input(shape=(1,))
 x = DenseLayer(units=100, layer_name="a")(inputs)
 x1 = FMLayer(units=64, layer_name="a1", activation="tanh")(inputs)
 x2 = DenseLayer(units=32, layer_name="a2", activation="relu")(inputs)
-k = RestNetLayer1D(layer_name="a3", padding_value=0.0, use_dense=True)(x1, x2)
+k = RestNetLayer1D(layer_name="a3", padding_dense_trainable=True)([x1, x2])
 
 outputs = DenseLayer(units=1, layer_name="o", activation="relu")(k)
 model = tf.keras.Model(inputs, outputs)
 model.compile(optimizer="sgd", loss='mse')
 
-model.fit(x_data, y_data, epochs=13000)
+model.fit(x_data, y_data, epochs=13000,
+          callbacks=[tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)])
 
 # print(model.summary())
 y_pred = model.predict(x_data)
