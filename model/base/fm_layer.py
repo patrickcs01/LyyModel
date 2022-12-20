@@ -15,11 +15,9 @@ class FMLayer(tf.keras.layers.Layer):
         self.units = units
 
     def build(self, input_shape):
-        self.b = self.add_weight(name='fm_layer_b_' + self.layer_name,
-                                 shape=(input_shape[-1],),
-                                 initializer='zeros',
-                                 trainable=True)
-        self.linear = DenseLayer(units=self.units, layer_name=self.layer_name)
+        self.linear = DenseLayer(units=self.units, layer_name=self.layer_name,
+                                 b_initializer=tf.keras.initializers.GlorotNormal())
+
         self.v = self.add_weight(name='fm_layer_v_' + self.layer_name,
                                  shape=(input_shape[-1], self.factor_order),
                                  initializer='glorot_uniform',

@@ -33,7 +33,7 @@ class DCNLayer(RecoBase):
                                       activation=self.output_activation,
                                       trainable=self.output_trainable)
         for i in range(self.num_deep):
-            self.deep_list.append(DenseLayer(units=int(self.dim * pow(0.85, i)), activation=self.deep_activation,
+            self.deep_list.append(DenseLayer(units=int(self.dim * pow(0.5, i)) + 1, activation=self.deep_activation,
                                              layer_name="dcn_deep_layer_{}_".format(i) + self.layer_name,
                                              trainable=self.deep_trainable))
 
@@ -55,7 +55,7 @@ class DCNLayer(RecoBase):
             x = DenseLayer(units=units, layer_name="dcn_cross_layer_{}_".format(i) + self.layer_name,
                            activation=self.cross_activation)(
                 cross)
-            cross = inputs * x + cross
+            cross += inputs * x
         if self.use_cross_bn:
             cross = tf.keras.layers.BatchNormalization()(cross)
 
