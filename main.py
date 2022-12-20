@@ -6,6 +6,7 @@ from model.base.dense_layer import DenseLayer
 from model.base.fm_layer import FMLayer
 from model.base.resnet_layer import RestNetLayer1D
 from model.reco.dcn_layer import DCNLayer
+from model.reco.wide_deep_layer import WideDeepLayer
 
 raw = np.linspace(0, 0.5, 2000)
 x_data = 6 * np.cos(raw) ** 3
@@ -20,14 +21,13 @@ plt.show()
 
 input_shape = x_data.shape
 inputs = tf.keras.Input(shape=(1,))
-k = DCNLayer(num_deep=5, num_cross=7, deep_activation="linear", cross_activation="relu", layer_name="dcn1",
-             output_dim=128, output_activation="relu")(inputs)
-# x = DenseLayer(units=100, layer_name="a")(k)
-x1 = FMLayer(units=64, layer_name="a1", activation="tanh")(k)
-x2 = DenseLayer(units=32, layer_name="a2", activation="relu")(x1)
+outputs = WideDeepLayer(layer_name="w&d")(inputs)
+# # x = DenseLayer(units=100, layer_name="a")(k)
+# x1 = FMLayer(units=64, layer_name="a1", activation="tanh")(k)
+# x2 = DenseLayer(units=32, layer_name="a2", activation="relu")(x1)
 # k = RestNetLayer1D(layer_name="a3", use_dense=True)([x1, x2])
 
-outputs = DenseLayer(units=1, layer_name="o")(x2)
+# outputs = DenseLayer(units=1, layer_name_name="o")(x2)
 model = tf.keras.Model(inputs, outputs)
 model.compile(optimizer="adam", loss='mse')
 
