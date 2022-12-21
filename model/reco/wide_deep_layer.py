@@ -27,6 +27,8 @@ class WideDeepLayer(tf.keras.layers.Layer):
         self.output_dens = DenseLayer(units=self.output_dim, layer_name="dcn_layer_output_" + self.layer_name,
                                       activation=self.output_activation,
                                       trainable=self.output_trainable)
+        self.linear = DenseLayer(units=64, layer_name="wid_deep_linear_" + self.layer_name, activation="softplus",
+                                 b_initializer=tf.keras.initializers.GlorotNormal())
         for i in range(self.num_deep):
             self.deep_list.append(DenseLayer(units=int(self.dim * pow(0.5, i)) + 1, activation=self.deep_activation,
                                              layer_name="wide_deep_deep_layer_{}_".format(i) + self.layer_name,
@@ -34,8 +36,8 @@ class WideDeepLayer(tf.keras.layers.Layer):
         super(WideDeepLayer, self).build(input_shape)
 
     def call(self, inputs):
-        wide = inputs
-        deep = inputs
+        wide = self.linear(inputs)
+        deep = self.linear(inputs)
 
         for deep_layer in self.deep_list:
             deep = deep_layer(deep)
@@ -43,6 +45,7 @@ class WideDeepLayer(tf.keras.layers.Layer):
                 deep = tf.keras.layers.BatchNormalization()(deep)
             if self.deep_dropout_rate > 0.0:
                 deep = tf.keras.layers.Dropout(self.deep_dropout_rate)(deep)
+
         z = tf.keras.layers.concatenate([wide, deep])
         z = self.output_dens(z)
         return z
