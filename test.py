@@ -18,34 +18,67 @@ import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
 
+from feature.feature_embedding import encode_inputs, create_model_inputs
+from feature.feature_tools import FeatureTools
+from model.base.dense_layer import DenseLayer
 from model.reco.dcn_layer import DCNLayer
 from model.reco.wide_deep_layer import WideDeepLayer
 
 df = pd.read_csv('../dataset/movies.csv')
-column = ['id', 'popularity', ]
+print(df.columns)
+print(df.director)
+feature_head_name = ['budget', 'genres', 'homepage', 'id', 'keywords',
+                     'original_language', 'original_title', 'overview', 'popularity',
+                     'production_companies', 'production_countries', 'release_date',
+                     'revenue', 'runtime', 'spoken_languages', 'status', 'tagline', 'title',
+                     'vote_average', 'cast', 'crew', 'director']
+numeric_feature_names = ['budget', 'popularity', 'revenue', 'runtime', 'vote_average']
+categorical_features_with_vocabulary = {
+    "homepage": list(df["homepage"].unique()),
+    "id": list(df["id"].unique()),
+    "original_language": list(df["original_language"].unique()),
+    'status': list(df["status"].unique()),
+    'director': list(df["director"].unique()),
+}
+target_feature_labels = list(df["vote_count"].unique())
+feature_tools = FeatureTools(feature_head_name=feature_head_name,
+                             numeric_feature_names=numeric_feature_names,
+                             categorical_features_with_vocabulary=categorical_features_with_vocabulary,
+                             target_name='vote_count',
+                             target_feature_labels=target_feature_labels)
+
+column = feature_tools.all_feature_name
 feature = column
 x_data = df[feature]
-y_data = df['vote_count']
-x_data = np.asarray(x_data)
-y_data = np.asarray(y_data)
-print(x_data)
-print(y_data)
+y_data = df[feature_tools.target_name]
+# x_data = np.asarray(x_data)
+# y_data = np.asarray(y_data)
 
 input_shape = x_data.shape
 print(input_shape)
+max_id_length = df.id.max()
+max_original_language_length = df.original_language.count()
 
-id = tf.keras.Input(shape=(1,))
-popularity = tf.keras.Input(shape=(1,))
+inputs = create_model_inputs(feature_tools)
+wide = encode_inputs(inputs,feature_tools)
+wide = tf.keras.layers.BatchNormalization()(wide)
 
+deep = encode_inputs(inputs, use_embedding=True)
+for units in [32, 32]:
+    deep = tf.keras.layers.Dense(units)(deep)
+    deep = tf.keras.layers.BatchNormalization()(deep)
+    deep = tf.keras.layers.ReLU()(deep)
+    deep = tf.keras.layers.Dropout(0.4)(deep)
 
-outputs = DCNLayer(layer_name="w&d", deep_activation="relu")(popularity)
+merged = tf.keras.layers.concatenate([wide, deep])
+outputs = tf.keras.layers.Dense(units=1)(merged)
+model = tf.keras.keras.Model(inputs=inputs, outputs=outputs)
 
-model = tf.keras.Model([id, popularity], outputs)
+# model = tf.keras.Model(input, outputs)
 model.compile(optimizer="adam", loss='mse')
 
-model.fit([x_data[:,0], x_data[:,1]], y_data, epochs=100, )
+model.fit(x_data, y_data, epochs=100, )
 
-
-y_pred = model.predict([x_data[:,0], x_data[:,1]])
+y_pred = model.predict(x_data)
 print(y_data)
 print(y_pred)
