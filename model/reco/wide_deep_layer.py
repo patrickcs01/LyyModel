@@ -30,9 +30,12 @@ class WideDeepLayer(tf.keras.layers.Layer):
         self.linear = DenseLayer(units=64, layer_name="wid_deep_linear_" + self.layer_name, activation="softplus",
                                  b_initializer=tf.keras.initializers.GlorotNormal())
         for i in range(self.num_deep):
-            self.deep_list.append(DenseLayer(units=int(self.dim * pow(0.5, i)) + 1, activation=self.deep_activation,
-                                             layer_name="wide_deep_deep_layer_{}_".format(i) + self.layer_name,
-                                             trainable=self.deep_trainable))
+            self.deep_list.append(DenseLayer(
+                units=int(self.dim * pow(0.5, i)) + 1 if int(self.dim * pow(0.5, i)) == 0 else int(
+                    self.dim * pow(0.5, i)),
+                activation=self.deep_activation,
+                layer_name="wide_deep_deep_layer_{}_".format(i) + self.layer_name,
+                trainable=self.deep_trainable))
         super(WideDeepLayer, self).build(input_shape)
 
     def call(self, inputs):
