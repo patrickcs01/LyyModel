@@ -39,9 +39,10 @@ class WideDeepLayer(tf.keras.layers.Layer):
         super(WideDeepLayer, self).build(input_shape)
 
     def call(self, inputs):
-        wide = self.linear(inputs)
-        deep = self.linear(inputs)
+        wide = inputs
+        wide = tf.keras.layers.BatchNormalization()(wide)
 
+        deep = inputs
         for deep_layer in self.deep_list:
             deep = deep_layer(deep)
             if self.use_deep_bn:
@@ -50,5 +51,6 @@ class WideDeepLayer(tf.keras.layers.Layer):
                 deep = tf.keras.layers.Dropout(self.deep_dropout_rate)(deep)
 
         z = tf.keras.layers.concatenate([wide, deep])
+        z = tf.keras.layers.BatchNormalization()(z)
         z = self.output_dens(z)
         return z
