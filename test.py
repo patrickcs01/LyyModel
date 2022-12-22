@@ -23,8 +23,11 @@ from feature.feature_tools import FeatureTools
 from model.base.dense_layer import DenseLayer
 from model.base.fm_layer import FMLayer
 from model.reco.dcn_layer import DCNLayer
+from model.reco.deepfm_layer import DeepFMLayer
 from model.reco.wide_deep_layer import WideDeepLayer
 
+
+batch_size=128
 df = pd.read_csv('../dataset/movies.csv')
 # print(df.columns)
 # print(df.director)
@@ -60,7 +63,7 @@ inputs = create_model_inputs(feature_tools)
 
 train_dataset = tf.data.experimental.make_csv_dataset(
     "../dataset/movies.csv",
-    batch_size=64,
+    batch_size=batch_size,
     # column_names=feature_tools.feature_head,
     # column_defaults=feature_tools.column_defaults,
     label_name=feature_tools.target_name,
@@ -71,7 +74,7 @@ train_dataset = tf.data.experimental.make_csv_dataset(
 
 test_dataset = tf.data.experimental.make_csv_dataset(
     "../dataset/movies.csv",
-    batch_size=64,
+    batch_size=batch_size,
     # column_names=feature_tools.feature_head,
     # column_defaults=feature_tools.column_defaults,
     label_name=feature_tools.target_name,
@@ -82,16 +85,18 @@ test_dataset = tf.data.experimental.make_csv_dataset(
 
 
 def create_model(inputs_, feature_tools_):
-    wide = encode_inputs(inputs_, feature_tools_)
+    encode_input = encode_inputs(inputs_, feature_tools_)
     # wide = tf.keras.layers.BatchNormalization()(wide)
 
-    deep = encode_inputs(inputs_, feature_tools_)
+    fm = FMLayer()(encode_input)
+    deepfm = DeepFMLayer(deep_activation='relu', num_deep=3, output_dim=64)(encode_input)
+    dcn = DCNLayer()(encode_input)
 
-    deep = WideDeepLayer(deep_activation='relu', num_deep=3, output_dim=64)(deep)
+    merged = tf.keras.layers.concatenate([fm, deepfm, dcn])
 
-    merged = tf.keras.layers.concatenate([wide, deep])
-    merged = tf.keras.layers.BatchNormalization()(merged)
-    outputs = DenseLayer(units=1)(merged)
+    outputs = DenseLayer(units=32)(merged)
+    outputs = DenseLayer(units=16)(outputs)
+    outputs = DenseLayer(units=1)(outputs)
 
     new_model = tf.keras.Model(inputs=inputs_, outputs=outputs)
     new_model.compile(optimizer="adam", loss='mse')
@@ -102,6 +107,6 @@ epochs = 1000
 model = create_model(inputs, feature_tools)
 model.fit(train_dataset, epochs=epochs, )
 
-results = model.evaluate(test_dataset, verbose=0, batch_size=64)
+results = model.evaluate(test_dataset, verbose=0, batch_size=batch_size)
 
 # print(f"Test accuracy: {round(accuracy * 100, 2)}%")
