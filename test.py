@@ -25,20 +25,16 @@ from model.reco.dcn_layer import DCNLayer
 from model.reco.wide_deep_layer import WideDeepLayer
 
 df = pd.read_csv('../dataset/movies.csv')
-print(df.columns)
-print(df.director)
-feature_head_name = ['budget', 'genres', 'homepage', 'id', 'keywords',
-                     'original_language', 'original_title', 'overview', 'popularity',
-                     'production_companies', 'production_countries', 'release_date',
-                     'revenue', 'runtime', 'spoken_languages', 'status', 'tagline', 'title',
-                     'vote_average', 'cast', 'crew', 'director']
-numeric_feature_names = ['budget', 'popularity', 'revenue', 'runtime', 'vote_average']
+# print(df.columns)
+# print(df.director)
+feature_head_name = ['budget', 'popularity', 'vote_count']
+numeric_feature_names = ['budget', 'popularity']
 categorical_features_with_vocabulary = {
-    "homepage": list(df["homepage"].unique()),
-    "id": list(df["id"].unique()),
-    "original_language": list(df["original_language"].unique()),
-    'status': list(df["status"].unique()),
-    'director': list(df["director"].unique()),
+    # "homepage": list(df["homepage"].unique()),
+    # "id": list(df["id"].unique()),
+    # "original_language": list(df["original_language"].unique()),
+    # 'status': list(df["status"].unique()),
+    # 'director': list(df["director"].unique()),
 }
 target_feature_labels = list(df["vote_count"].unique())
 feature_tools = FeatureTools(feature_head_name=feature_head_name,
@@ -51,8 +47,8 @@ column = feature_tools.all_feature_name
 feature = column
 x_data = df[feature]
 y_data = df[feature_tools.target_name]
-# x_data = np.asarray(x_data)
-# y_data = np.asarray(y_data)
+x_data = np.asarray(x_data).astype(np.float32)
+y_data = np.asarray(y_data)
 
 input_shape = x_data.shape
 print(input_shape)
@@ -60,10 +56,24 @@ max_id_length = df.id.max()
 max_original_language_length = df.original_language.count()
 
 inputs = create_model_inputs(feature_tools)
-wide = encode_inputs(inputs,feature_tools)
+
+
+train_dataset = tf.data.experimental.make_csv_dataset(
+    "../dataset/movies.csv",
+    batch_size=32,
+    # column_names=feature_tools.feature_head,
+    # column_defaults=feature_tools.column_defaults,
+    label_name=feature_tools.target_name,
+    num_epochs=1,
+    header=True,
+    shuffle=True,
+)
+
+
+wide = encode_inputs(inputs, feature_tools)
 wide = tf.keras.layers.BatchNormalization()(wide)
 
-deep = encode_inputs(inputs, use_embedding=True)
+deep = encode_inputs(inputs, feature_tools)
 for units in [32, 32]:
     deep = tf.keras.layers.Dense(units)(deep)
     deep = tf.keras.layers.BatchNormalization()(deep)
@@ -72,13 +82,13 @@ for units in [32, 32]:
 
 merged = tf.keras.layers.concatenate([wide, deep])
 outputs = tf.keras.layers.Dense(units=1)(merged)
-model = tf.keras.keras.Model(inputs=inputs, outputs=outputs)
+model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
 # model = tf.keras.Model(input, outputs)
 model.compile(optimizer="adam", loss='mse')
 
-model.fit(x_data, y_data, epochs=100, )
+model.fit(train_dataset, epochs=1000, )
 
-y_pred = model.predict(x_data)
-print(y_data)
-print(y_pred)
+# _, accuracy = model.evaluate(train_dataset, verbose=0)
+
+# print(f"Test accuracy: {round(accuracy * 100, 2)}%")
