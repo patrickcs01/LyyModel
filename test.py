@@ -21,6 +21,7 @@ from matplotlib import pyplot as plt
 from feature.feature_embedding import encode_inputs, create_model_inputs
 from feature.feature_tools import FeatureTools
 from model.base.dense_layer import DenseLayer
+from model.base.fm_layer import FMLayer
 from model.reco.dcn_layer import DCNLayer
 from model.reco.wide_deep_layer import WideDeepLayer
 
@@ -57,10 +58,20 @@ max_original_language_length = df.original_language.count()
 
 inputs = create_model_inputs(feature_tools)
 
-
 train_dataset = tf.data.experimental.make_csv_dataset(
     "../dataset/movies.csv",
-    batch_size=32,
+    batch_size=64,
+    # column_names=feature_tools.feature_head,
+    # column_defaults=feature_tools.column_defaults,
+    label_name=feature_tools.target_name,
+    num_epochs=1,
+    header=True,
+    shuffle=True,
+)
+
+test_dataset = tf.data.experimental.make_csv_dataset(
+    "../dataset/movies.csv",
+    batch_size=64,
     # column_names=feature_tools.feature_head,
     # column_defaults=feature_tools.column_defaults,
     label_name=feature_tools.target_name,
@@ -70,25 +81,27 @@ train_dataset = tf.data.experimental.make_csv_dataset(
 )
 
 
-wide = encode_inputs(inputs, feature_tools)
-wide = tf.keras.layers.BatchNormalization()(wide)
+def create_model(inputs_, feature_tools_):
+    wide = encode_inputs(inputs_, feature_tools_)
+    # wide = tf.keras.layers.BatchNormalization()(wide)
 
-deep = encode_inputs(inputs, feature_tools)
-for units in [32, 32]:
-    deep = tf.keras.layers.Dense(units)(deep)
-    deep = tf.keras.layers.BatchNormalization()(deep)
-    deep = tf.keras.layers.ReLU()(deep)
-    deep = tf.keras.layers.Dropout(0.4)(deep)
+    deep = encode_inputs(inputs_, feature_tools_)
 
-merged = tf.keras.layers.concatenate([wide, deep])
-outputs = tf.keras.layers.Dense(units=1)(merged)
-model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    deep = WideDeepLayer(deep_activation='relu', num_deep=3, output_dim=64)(deep)
 
-# model = tf.keras.Model(input, outputs)
-model.compile(optimizer="adam", loss='mse')
+    merged = tf.keras.layers.concatenate([wide, deep])
+    merged = tf.keras.layers.BatchNormalization()(merged)
+    outputs = DenseLayer(units=1)(merged)
 
-model.fit(train_dataset, epochs=1000, )
+    new_model = tf.keras.Model(inputs=inputs_, outputs=outputs)
+    new_model.compile(optimizer="adam", loss='mse')
+    return new_model
 
-# _, accuracy = model.evaluate(train_dataset, verbose=0)
+
+epochs = 1000
+model = create_model(inputs, feature_tools)
+model.fit(train_dataset, epochs=epochs, )
+
+results = model.evaluate(test_dataset, verbose=0, batch_size=64)
 
 # print(f"Test accuracy: {round(accuracy * 100, 2)}%")
